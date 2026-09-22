@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة التحكم - الإدارة</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif; }
+  body {
+    background: linear-gradient(135deg, #2c3e50 0%, #4a3f8f 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #333;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  /* شاشة تسجيل الدخول */
+  .login-screen {
+    min-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .login-box {
+    background: #fff;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+  }
+  .login-box .icon {
+    font-size: 60px;
+    margin-bottom: 15px;
+  }
+  .login-box h2 {
+    color: #4a3f8f;
+    margin-bottom: 10px;
+  }
+  .login-box p {
+    color: #666;
+    margin-bottom: 25px;
+    font-size: 14px;
+  }
+  .login-box input {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 16px;
+    margin-bottom: 15px;
+    text-align: center;
+  }
+  .login-box input:focus {
+    outline: none;
+    border-color: #667eea;
+  }
+  .login-box button {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .login-box button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  }
+  .login-error {
+    color: #eb3349;
+    margin-top: 10px;
+    font-size: 14px;
+    display: none;
+  }
+
+  /* لوحة التحكم */
+  .admin-panel { display: none; }
+  .header {
+    background: #fff;
+    padding: 20px 25px;
+    border-radius: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .header h1 { color: #4a3f8f; font-size: 24px; }
+  .logout-btn {
+    padding: 10px 20px;
+    background: #eb3349;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .card {
+    background: #fff;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    margin-bottom: 25px;
+  }
+  .card h2 {
+    color: #4a3f8f;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #eee;
+    font-size: 22px;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+  .stat-box {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+  }
+  .stat-box h3 { font-size: 32px; margin-bottom: 5px; }
+  .stat-box p { font-size: 14px; opacity: 0.9; }
+
+  .search-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+  }
+  .search-bar input, .search-bar select {
+    padding: 10px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 14px;
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .buttons {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 12px 28px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-success { background: linear-gradient(135deg, #11998e, #38ef7d); color: #fff; }
+  .btn-danger  { background: linear-gradient(135deg, #eb3349, #f45c43); color: #fff; }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+
+  .table-wrapper { overflow-x: auto; border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; }
+  th {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    padding: 14px 10px;
+    text-align: right;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+  }
+  tr:hover { background: #f8f9ff; }
+  .action-btns { display: flex; gap: 6px; }
+  .mini-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #fff;
+  }
+  .delete-btn { background: #eb3349; }
+
+  .empty {
+    text-align: center;
+    padding: 50px 20px;
+    color: #999;
+  }
+  .empty-icon { font-size: 60px; margin-bottom: 15px; }
+
+  .toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 14px 28px;
+    background: #11998e;
+    color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-weight: 600;
+  }
+  .toast.show { opacity: 1; }
+  .toast.error { background: #eb3349; }
+
+  @media (max-width: 600px) {
+    .header h1 { font-size: 18px; }
+    .card { padding: 20px; }
+    .btn { padding: 10px 18px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- 🔐 شاشة تسجيل الدخول -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-box">
+      <div class="icon">🔐</div>
+      <h2>لوحة التحكم</h2>
+      <p>هذه المنطقة مخصصة للإدارة فقط. أدخل كلمة المرور للمتابعة</p>
+      <input type="password" id="passwordInput" placeholder="كلمة المرور" onkeypress="if(event.key==='Enter') login()">
+      <button onclick="login()">🔓 دخول</button>
+      <p class="login-error" id="loginError">❌ كلمة المرور غير صحيحة</p>
+    </div>
+  </div>
+
+  <!-- 📊 لوحة التحكم -->
+  <div class="admin-panel" id="adminPanel">
+    <div class="header">
+      <h1>📊 لوحة التحكم - الإدارة</h1>
+      <button class="logout-btn" onclick="logout()">🚪 تسجيل خروج</button>
+    </div>
+
+    <div class="card">
+      <h2>📈 الإحصائيات</h2>
+      <div class="stats">
+        <div class="stat-box">
+          <h3 id="totalCount">0</h3>
+          <p>إجمالي الطلاب</p>
+        </div>
+        <div class="stat-box" style="background: linear-gradient(135deg, #11998e, #38ef7d);">
+          <h3 id="primaryCount">0</h3>
+          <p>الابتدائي</p>
+        </div>
+        <div class="stat-box" style="background: linear-gradient(135deg, #f7971e, #ffd200);">
+          <h3 id="middleCount">0</h3>
+          <p>الإعدادي</p>
+        </div>
+        <div class="stat-box" style="background: linear-gradient(135deg, #eb3349, #f45c43);">
+          <h3 id="highCount">0</h3>
+          <p>الثانوي/بكالوريا</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📋 قائمة الطلاب المسجلين</h2>
+
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="🔍 ابحث باسم الطالب...">
+        <select id="filterYear">
+          <option value="">كل السنوات الدراسية</option>
+        </select>
+        <select id="filterCity">
+          <option value="">كل المدن</option>
+        </select>
+      </div>
+
+      <div class="buttons">
+        <button class="btn btn-success" onclick="exportToExcel()">📥 تصدير إلى Excel</button>
+        <button class="btn btn-danger" onclick="clearAll()">🗑️ حذف جميع البيانات</button>
+      </div>
+
+      <div class="table-wrapper">
+        <table id="studentsTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>الاسم الشخصي</th>
+              <th>الاسم الثلاثي</th>
+              <th>اسم الأب</th>
+              <th>اسم الأم</th>
+              <th>السنة الدراسية</th>
+              <th>المدينة</th>
+              <th>الناحية/الضيعة</th>
+              <th>الهاتف</th>
+              <th>تاريخ التسجيل</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="studentsBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyState" class="empty" style="display:none;">
+        <div class="empty-icon">📭</div>
+        <h3>لا توجد بيانات مسجلة بعد</h3>
+        <p>بانتظار تقديم الطلاب لبياناتهم</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+  // 🔑 كلمة المرور - يمكنك تغييرها من هنا
+  const ADMIN_PASSWORD = 'admin123';
+
+  const STORAGE_KEY = 'students_data_v1';
+  const AUTH_KEY = 'admin_auth_v1';
+
+  // التحقق من الدخول عند فتح الصفحة
+  window.addEventListener('load', () => {
+    if (sessionStorage.getItem(AUTH_KEY) === 'true') {
+      showAdminPanel();
+    }
+  });
+
+  // تسجيل الدخول
+  function login() {
+    const pwd = document.getElementById('passwordInput').value;
+    if (pwd === ADMIN_PASSWORD) {
+      sessionStorage.setItem(AUTH_KEY, 'true');
+      showAdminPanel();
+    } else {
+      document.getElementById('loginError').style.display = 'block';
+      document.getElementById('passwordInput').value = '';
+      setTimeout(() => {
+        document.getElementById('loginError').style.display = 'none';
+      }, 3000);
+    }
+  }
+
+  // تسجيل الخروج
+  function logout() {
+    if (!confirm('هل تريد تسجيل الخروج؟')) return;
+    sessionStorage.removeItem(AUTH_KEY);
+    document.getElementById('adminPanel').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('passwordInput').value = '';
+  }
+
+  // عرض لوحة التحكم
+  function showAdminPanel() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('adminPanel').style.display = 'block';
+    render();
+  }
+
+  function toast(msg, isError=false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isError ? ' error' : '');
+    setTimeout(() => t.className = 'toast', 2500);
+  }
+
+  function getStudents() {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  }
+
+  function populateFilter() {
+    const students = getStudents();
+    const years = [...new Set(students.map(s => s.studyYear))];
+    const cities = [...new Set(students.map(s => s.city).filter(c => c))];
+
+    const yearFilter = document.getElementById('filterYear');
+    const currentYear = yearFilter.value;
+    yearFilter.innerHTML = '<option value="">كل السنوات الدراسية</option>';
+    years.forEach(y => yearFilter.innerHTML += `<option>${y}</option>`);
+    yearFilter.value = currentYear;
+
+    const cityFilter = document.getElementById('filterCity');
+    const currentCity = cityFilter.value;
+    cityFilter.innerHTML = '<option value="">كل المدن</option>';
+    cities.forEach(c => cityFilter.innerHTML += `<option>${c}</option>`);
+    cityFilter.value = currentCity;
+  }
+
+  function render() {
+    const students = getStudents();
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const filterYear = document.getElementById('filterYear').value;
+    const filterCity = document.getElementById('filterCity').value;
+
+    let filtered = students.filter(s => {
+      const matchSearch = !search || s.fullName.toLowerCase().includes(search) || s.firstName.toLowerCase().includes(search);
+      const matchYear = !filterYear || s.studyYear === filterYear;
+      const matchCity = !filterCity || s.city === filterCity;
+      return matchSearch && matchYear && matchCity;
+    });
+
+    const tbody = document.getElementById('studentsBody');
+    const emptyState = document.getElementById('emptyState');
+    const table = document.getElementById('studentsTable');
+
+    tbody.innerHTML = '';
+    if (filtered.length === 0) {
+      table.style.display = 'none';
+      emptyState.style.display = 'block';
+    } else {
+      table.style.display = 'table';
+      emptyState.style.display = 'none';
+      filtered.forEach((s, i) => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${i+1}</td>
+            <td>${escapeHtml(s.firstName)}</td>
+            <td><strong>${escapeHtml(s.fullName)}</strong></td>
+            <td>${escapeHtml(s.fatherName)}</td>
+            <td>${escapeHtml(s.motherName)}</td>
+            <td>${escapeHtml(s.studyYear)}</td>
+            <td>${escapeHtml(s.city || '-')}</td>
+            <td>${escapeHtml(s.district || '-')}</td>
+            <td>${escapeHtml(s.phone || '-')}</td>
+            <td>${s.date}</td>
+            <td>
+              <div class="action-btns">
+                <button class="mini-btn delete-btn" onclick="deleteStudent('${s.id}')">🗑️ حذف</button>
+              </div>
+            </td>
+          </tr>`;
+      });
+    }
+
+    document.getElementById('totalCount').textContent = students.length;
+    document.getElementById('primaryCount').textContent = students.filter(s => s.studyYear.includes('الابتدائي')).length;
+    document.getElementById('middleCount').textContent = students.filter(s => s.studyYear.includes('الإعدادي')).length;
+    document.getElementById('highCount').textContent = students.filter(s => s.studyYear.includes('الثانوي') || s.studyYear.includes('البكالوريا')).length;
+
+    populateFilter();
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function deleteStudent(id) {
+    if (!confirm('هل أنت متأكد من حذف هذا الطالب؟')) return;
+    let students = getStudents().filter(s => s.id !== id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
+    render();
+    toast('🗑️ تم حذف الطالب', true);
+  }
+
+  function clearAll() {
+    const students = getStudents();
+    if (students.length === 0) { toast('لا توجد بيانات للحذف', true); return; }
+    if (!confirm('⚠️ سيتم حذف جميع البيانات نهائياً! هل أنت متأكد؟')) return;
+    localStorage.setItem(STORAGE_KEY, '[]');
+    render();
+    toast('🗑️ تم حذف جميع البيانات', true);
+  }
+
+  function exportToExcel() {
+    const students = getStudents();
+    if (students.length === 0) { toast('لا توجد بيانات للتصدير', true); return; }
+    const data = students.map((s, i) => ({
+      'الرقم': i + 1,
+      'الاسم الشخصي': s.firstName,
+      'الاسم الثلاثي': s.fullName,
+      'اسم الأب': s.fatherName,
+      'اسم الأم': s.motherName,
+      'السنة الدراسية': s.studyYear,
+      'المدينة': s.city || '-',
+      'الناحية/الضيعة': s.district || '-',
+      'رقم الهاتف': s.phone || '-',
+      'تاريخ التسجيل': s.date
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws['!cols'] = [{wch:6},{wch:18},{wch:30},{wch:20},{wch:20},{wch:28},{wch:15},{wch:20},{wch:15},{wch:15}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'الطلاب');
+    const date = new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb, `بيانات_الطلاب_${date}.xlsx`);
+    toast('📥 تم تصدير الملف بنجاح');
+  }
+
+  document.getElementById('searchInput').addEventListener('input', render);
+  document.getElementById('filterYear').addEventListener('change', render);
+  document.getElementById('filterCity').addEventListener('change', render);
+</script>
+</body>
+</html>
